@@ -1,0 +1,258 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  NODE_VERSION: "20.x"
+
+jobs:
+  # ========================================
+  # BACKEND - Build & Test
+  # ========================================
+  backend-build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          cache: true
+      
+      - name: Restore
+        run: dotnet restore CicloHelper.slnx
+      
+      - name: Build
+        run: dotnet build CicloHelper.slnx --no-restore -c Release
+      
+      - name: Format Check
+        run: dotnet format --verify-no-changes --verbosity diagnostic
+      
+      - name: Run Unit Tests
+        run: dotnet test tests/CicloHelper.Tests.Unit --no-build -c Release --logger "trx;LogFileName=unit-tests.trx"
+      
+      - name: Upload Unit Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-results
+          path: tests/CicloHelper.Tests.Unit/**/*.trx
+
+  # ========================================
+  # BACKEND - Integration Tests (Testcontainers)
+  # ========================================
+  backend-integration-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: CicloHelper@2026!
+          MSSQL_PID: Developer
+        ports: [1433:1433]
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'CicloHelper@2026!' -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          cache: true
+      
+      - name: Wait for SQL Server
+        run: |
+          for i in {1..30}; do
+            /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'CicloHelper@2026!' -Q "SELECT 1" && break
+            sleep 2
+          done
+      
+      - name: Run Integration Tests
+        run: dotnet test tests/CicloHelper.Tests.Integration --no-build -c Release --logger "trx;LogFileName=integration-tests.trx"
+        env:
+          ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=CicloHelper;User=sa;Password=CicloHelper@2026!;TrustServerCertificate=True;"
+      
+      - name: Upload Integration Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results
+          path: tests/CicloHelper.Tests.Integration/**/*.trx
+
+  # ========================================
+  # BACKEND - Security Scan (CodeQL)
+  # ========================================
+  codeql-analysis:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    
+    strategy:
+      matrix:
+        language: [csharp]
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: +security-and-quality
+      
+      - name: Build
+        run: dotnet build CicloHelper.slnx -c Release
+      
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  # ========================================
+  # FRONTEND - Build & Test
+  # ========================================
+  frontend-build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: src/CicloHelper.Web
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: src/CicloHelper.Web/package-lock.json
+      
+      - name: Install Dependencies
+        run: npm ci
+      
+      - name: Lint
+        run: npm run lint
+      
+      - name: Type Check
+        run: npx tsc --noEmit
+      
+      - name: Run Tests
+        run: npm run test -- --coverage
+      
+      - name: Build
+        run: npm run build
+      
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: src/CicloHelper.Web/dist/
+          retention-days: 7
+
+  # ========================================
+  # SECURITY - Dependency Scan
+  # ========================================
+  dependency-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: "CicloHelper"
+          path: "."
+          format: "HTML"
+          out: "dependency-check-report"
+          args: >
+            --failOnCVSS 7
+            --suppression files: ".github/dependency-check-suppressions.xml"
+      
+      - name: Upload Dependency Check Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-check-report
+          path: dependency-check-report/
+
+  # ========================================
+  # SECRETS - Secret Scanning
+  # ========================================
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --fail --json
+
+  # ========================================
+  # DOCKER - Build Validation
+  # ========================================
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [backend-build-test, frontend-build-test]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Build API Image
+        run: docker build -f src/CicloHelper.API/Dockerfile -t ciclohelper-api:${{ github.sha }} .
+      
+      - name: Build Web Image
+        run: docker build -f src/CicloHelper.Web/Dockerfile -t ciclohelper-web:${{ github.sha }} src/CicloHelper.Web
+
+  # ========================================
+  # SUMMARY
+  # ========================================
+  ci-summary:
+    runs-on: ubuntu-latest
+    needs: 
+      - backend-build-test
+      - backend-integration-tests
+      - codeql-analysis
+      - frontend-build-test
+      - dependency-scan
+      - secret-scan
+      - docker-build
+    if: always()
+    steps:
+      - name: Check Job Status
+        run: |
+          if ${{ contains(needs.*.result, 'failure') }}; then
+            echo "❌ Some jobs failed"
+            exit 1
+          else
+            echo "✅ All CI checks passed"
+          fi

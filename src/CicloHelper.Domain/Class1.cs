@@ -1,4 +1,4 @@
-﻿namespace CicloHelper.Domain;
+namespace CicloHelper.Domain;
 
 public class Class1
 {

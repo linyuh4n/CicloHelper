@@ -21,6 +21,37 @@ services:
     networks:
       - ciclohelper-network
 
+  api:
+    image: ciclohelper-api:latest
+    container_name: ciclohelper-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=CicloHelper;User Id=sa;Password=CicloHelper@2026!;TrustServerCertificate=True;"
+    ports:
+      - '8080:8080'
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    healthcheck:
+      test: curl -f http://localhost:8080/health/live || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - ciclohelper-network
+
+  web:
+    image: ciclohelper-web:latest
+    container_name: ciclohelper-web
+    ports:
+      - '8081:8080'
+    depends_on:
+      - api
+    networks:
+      - ciclohelper-network
+
 volumes:
   sqlserver_data:
 
