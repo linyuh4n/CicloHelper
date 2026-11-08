@@ -129,11 +129,25 @@ if (app.Environment.IsDevelopment())
         options.EnableTryItOutByDefault();
     });
     app.UseCors("Development");
-}
 
-app.UseHttpsRedirection();
+    // HTTPS Redirection apenas em Development (com certificado dev)
+    app.UseHttpsRedirection();
+}
+// Em Production: TLS termina no reverse proxy (nginx, Azure Front Door, etc.)
+// Não usar UseHttpsRedirection() pois não há porta HTTPS configurada no container
+
 app.UseAuthorization();
 app.MapControllers();
+
+// Endpoint raiz simples para info da API
+app.MapGet("/", () => Results.Json(new
+{
+    name = "CicloHelper API",
+    version = "v1",
+    description = "API para acompanhamento do ciclo menstrual, bem-estar, diário pessoal, nutrição e exercícios.",
+    docs = "/swagger",
+    health = new { live = "/health/live", ready = "/health/ready", full = "/health" }
+})).ExcludeFromDescription();
 
 app.MapHealthChecks("/health", new HealthCheckOptions
 {

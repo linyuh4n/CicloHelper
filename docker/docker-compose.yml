@@ -1,19 +1,17 @@
-version: '3.8'
-
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: ciclohelper-sqlserver
     environment:
-      ACCEPT_EULA: 'Y'
-      SA_PASSWORD: 'CicloHelper@2026!'
-      MSSQL_PID: 'Developer'
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "CicloHelper@2026!"
+      MSSQL_PID: "Developer"
     ports:
-      - '1433:1433'
+      - "1433:1433"
     volumes:
       - sqlserver_data:/var/opt/mssql
     healthcheck:
-      test: /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'CicloHelper@2026!' -Q 'SELECT 1' || exit 1
+      test: /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "CicloHelper@2026!" -Q "SELECT 1" || exit 1
       interval: 10s
       timeout: 5s
       retries: 10
@@ -26,10 +24,9 @@ services:
     container_name: ciclohelper-api
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=CicloHelper;User Id=sa;Password=CicloHelper@2026!;TrustServerCertificate=True;"
     ports:
-      - '8080:8080'
+      - "8080:8080"
     depends_on:
       sqlserver:
         condition: service_healthy
@@ -46,7 +43,7 @@ services:
     image: ciclohelper-web:latest
     container_name: ciclohelper-web
     ports:
-      - '8081:8080'
+      - "8081:8080"
     depends_on:
       - api
     networks:

@@ -4,11 +4,11 @@ FROM node:20-alpine AS build
 WORKDIR /app
 
 # Copiar package files
-COPY package*.json ./
+COPY src/CicloHelper.Web/package*.json ./
 RUN npm ci
 
 # Copiar código
-COPY . .
+COPY src/CicloHelper.Web/ ./
 
 # Build
 RUN npm run build
@@ -17,7 +17,7 @@ RUN npm run build
 FROM nginx:alpine AS runtime
 
 # Copiar config customizada
-COPY nginx.conf /etc/nginx/nginx.conf
+COPY src/CicloHelper.Web/nginx.conf /etc/nginx/nginx.conf
 
 # Copiar build artifacts
 COPY --from=build /app/dist /usr/share/nginx/html

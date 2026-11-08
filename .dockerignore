@@ -1,8 +1,11 @@
 # Ignore build outputs
 bin/
 obj/
+**/bin/
+**/obj/
 out/
 publish/
+dist/
 
 # Ignore IDE/editor files
 .vs/
@@ -39,4 +42,7 @@ Thumbs.db
 .env.local
 
 # Ignore node_modules for frontend
-src/CicloHelper.Web/node_modules/
+**/node_modules/
+
+# Ignore frontend build output
+src/CicloHelper.Web/dist/
