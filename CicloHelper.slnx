@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CicloHelper.API/CicloHelper.API.csproj" />
+    <Project Path="src/CicloHelper.Application/CicloHelper.Application.csproj" />
+    <Project Path="src/CicloHelper.Contracts/CicloHelper.Contracts.csproj" />
+    <Project Path="src/CicloHelper.Domain/CicloHelper.Domain.csproj" />
+    <Project Path="src/CicloHelper.Infrastructure/CicloHelper.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CicloHelper.Tests.Integration/CicloHelper.Tests.Integration.csproj" />
+    <Project Path="tests/CicloHelper.Tests.Unit/CicloHelper.Tests.Unit.csproj" />
+  </Folder>
+</Solution>

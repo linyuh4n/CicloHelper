@@ -1,0 +1,445 @@
+# CicloHelper — Fundação do projeto
+
+Atue como um **Software Architect e Senior Full Stack Engineer especializado em .NET, React, segurança, privacidade e arquitetura de sistemas**.
+
+Sua missão é iniciar a implementação do CicloHelper, um produto web de acompanhamento do ciclo menstrual, bem-estar, diário pessoal, nutrição e atividades físicas.
+
+Você deve trabalhar com qualidade de produção, Clean Architecture, código sustentável, testes automatizados e segurança desde o início.
+
+Não construa tudo de uma vez. Nesta primeira etapa, estabeleça uma fundação sólida para que os próximos módulos sejam implementados incrementalmente.
+
+# 1. Antes de implementar
+
+Inspecione completamente o repositório atual.
+
+Identifique:
+- Arquivos e projetos existentes.
+- Tecnologias e versões utilizadas.
+- Estrutura atual.
+- Configurações e dependências.
+- Código que pode ser reaproveitado.
+- Problemas arquiteturais ou técnicos existentes.
+
+Não sobrescreva código existente sem entender sua finalidade.
+
+Se o repositório estiver vazio, inicialize a estrutura proposta abaixo.
+
+Antes de tomar decisões arquiteturais não documentadas, registre as dúvidas e proponha ADRs.
+
+# 2. Contexto do produto
+
+Nome: CicloHelper.
+
+Objetivo: aplicação web para acompanhamento menstrual, registros pessoais, previsões, bem-estar, nutrição, exercícios e conteúdo educativo.
+
+Público inicial: adultos com 18 anos ou mais.
+
+Características:
+- Aplicação web responsiva.
+- Mobile-first.
+- Idioma inicial pt-BR.
+- Preparada para internacionalização.
+- Sem aplicativo nativo no MVP.
+- Sem PWA.
+- Sem funcionamento offline.
+- Sem inteligência artificial generativa no MVP.
+- Sem pagamentos ou assinaturas no MVP.
+- Sem notificações push, e-mail, SMS ou lembretes.
+- Sem compartilhamento de dados pessoais com parceiros ou familiares.
+
+O produto deve ser desenvolvido pensando em um futuro SaaS, mas sem introduzir complexidade desnecessária.
+
+# 3. Stack tecnológica obrigatória
+
+## Backend
+- C#.
+- .NET 10.
+- ASP.NET Core Web API.
+- Entity Framework Core.
+- SQL Server.
+- Dapper quando houver justificativa técnica.
+- Clean Architecture.
+- Modular Monolith.
+- REST API.
+- Swagger/OpenAPI.
+- Problem Details RFC 9457.
+- xUnit.
+- FluentAssertions.
+
+## Frontend
+- React.
+- TypeScript.
+- Vite.
+- Tailwind CSS.
+- shadcn/ui.
+- Lucide React.
+- TanStack Query.
+- Zustand.
+- React Hook Form.
+- Zod.
+- Recharts.
+
+Utilize Context API quando uma solução simples for suficiente.
+
+Não adicione bibliotecas sem necessidade justificada.
+
+## Infraestrutura e ferramentas
+- SQL Server via Docker no desenvolvimento local.
+- Docker Compose.
+- GitHub Actions.
+- GitHub.
+- SonarCloud.
+- Dependabot.
+- CodeQL.
+- GitHub Secret Scanning.
+
+Infraestrutura futura de produção:
+- Frontend: Vercel.
+- Backend: Azure App Service.
+- Banco: Azure SQL Database.
+- Arquivos: Azure Blob Storage.
+- Secrets: Azure Key Vault.
+- Monitoramento: Sentry e Application Insights.
+
+# 4. Arquitetura do backend
+
+Organize a solução inicialmente com os seguintes projetos:
+
+- CicloHelper.Domain
+- CicloHelper.Application
+- CicloHelper.Infrastructure
+- CicloHelper.API
+- CicloHelper.Contracts
+- CicloHelper.Tests.Unit
+- CicloHelper.Tests.Integration
+
+Responsabilidades:
+
+**Domain**
+- Entidades.
+- Value Objects.
+- Enums.
+- Regras de negócio.
+- Domain Events quando necessários.
+
+**Application**
+- Use Cases.
+- Commands e Queries.
+- Interfaces.
+- Validações.
+- Autorização em nível de aplicação.
+
+**Infrastructure**
+- Entity Framework Core.
+- SQL Server.
+- Implementações de persistência.
+- Integrações externas.
+- Serviços de infraestrutura.
+
+**API**
+- Controllers ou endpoints organizados.
+- Autenticação e autorização.
+- Middlewares.
+- Configurações.
+- Dependency Injection.
+- Swagger.
+- Problem Details.
+
+**Contracts**
+- DTOs.
+- Requests.
+- Responses.
+- Contratos públicos da API.
+
+Evite criar abstrações genéricas sem necessidade real.
+
+Não utilize Generic Repository sobre EF Core sem justificativa.
+
+# 5. Organização dos módulos
+
+O sistema será um Modular Monolith com os seguintes módulos:
+
+1. Identity / Accounts.
+2. Menstrual Tracking.
+3. Daily Diary.
+4. Cycle Predictions.
+5. Nutrition.
+6. Exercises.
+7. Recommendations.
+8. Content Management.
+9. Reports.
+10. Privacy / Data Management.
+11. Administration.
+12. Support.
+
+Cada módulo deverá ter responsabilidades claras e baixo acoplamento.
+
+Não implemente todos esses módulos nesta primeira etapa.
+
+Prepare a arquitetura para que sejam adicionados progressivamente.
+
+# 6. Organização do frontend
+
+Organize o React por funcionalidades:
+
+- authentication
+- dashboard
+- menstrual-tracking
+- diary
+- predictions
+- nutrition
+- exercises
+- recommendations
+- reports
+- profile
+- administration
+- support
+
+Também organize:
+- shared
+- infrastructure
+- styles
+
+Crie uma estrutura que facilite a evolução do sistema sem transformar o frontend em um conjunto de componentes desorganizados.
+
+# 7. Segurança e privacidade
+
+O CicloHelper tratará dados pessoais sensíveis relacionados à saúde menstrual e reprodutiva.
+
+Segurança e privacidade são requisitos arquiteturais, não funcionalidades opcionais.
+
+Princípios obrigatórios:
+
+- Privacy by Design.
+- Privacy by Default.
+- Least Privilege.
+- Defense in Depth.
+- Secure by Default.
+- Data Minimization.
+
+Regras:
+
+- Nunca confiar em UserId enviado pelo frontend.
+- Toda operação com dados pessoais deverá validar a propriedade do registro no backend.
+- Prevenir IDOR, XSS, CSRF, SQL Injection e mass assignment.
+- Não registrar dados menstruais, sintomas, fertilidade, diário ou textos livres em logs.
+- Não armazenar tokens de autenticação em localStorage ou sessionStorage.
+- Não expor refresh tokens ao React.
+- Não utilizar dados reais de produção em Development.
+- Não expor informações internas em exceções.
+- Não permitir acesso administrativo irrestrito aos dados sensíveis.
+- Não implementar funcionalidades que violem as decisões de privacidade aprovadas.
+
+A arquitetura de autenticação aprovada utiliza BFF com sessão gerenciada pelo ASP.NET Core, cookies seguros e tokens de provedores mantidos exclusivamente no backend.
+
+Os provedores de identidade previstos são Google e Apple via OIDC.
+
+Os detalhes de implementação deverão ser documentados em ADR antes de implementar a autenticação.
+
+# 8. Criptografia
+
+A arquitetura aprovada prevê:
+
+- TLS.
+- TDE no banco.
+- Criptografia de aplicação para dados menstruais e reprodutivos sensíveis.
+- Envelope Encryption.
+- DEK individual por usuário.
+- KEK gerenciada no Azure Key Vault.
+- AES-256-GCM.
+- Nonce único por operação.
+- Tag de autenticação.
+- Versionamento criptográfico.
+- Rotação de KEK e DEK.
+- Crypto-shredding.
+- Deletion Ledger.
+- Managed Identity.
+- Auditoria de operações criptográficas.
+
+IMPORTANTE:
+
+Não implemente criptografia caseira.
+
+Não invente algoritmos, formatos ou mecanismos de armazenamento de chaves.
+
+Não armazene chaves em código, arquivos de configuração ou repositório.
+
+A implementação criptográfica deverá ter ADR, revisão de segurança e testes específicos.
+
+Nesta primeira etapa, prepare a arquitetura e documente as decisões. Não simule segurança com implementações incompletas.
+
+# 9. Padrões de desenvolvimento
+
+Adote:
+
+- SOLID.
+- Clean Code.
+- Separação de responsabilidades.
+- Dependency Injection.
+- Async/Await.
+- CancellationToken em operações assíncronas.
+- Validação no backend.
+- Logging estruturado com minimização de dados.
+- Tratamento centralizado de erros.
+- Paginação quando aplicável.
+- Transações quando necessárias.
+- Idempotência em operações críticas.
+- Migrations versionadas.
+- Testes automatizados.
+
+Datas:
+- DateOnly para datas de calendário.
+- DateTimeOffset para instantes.
+- Armazenamento de instantes em UTC.
+- Timezone inicial: America/Sao_Paulo.
+
+Não converter datas de calendário para UTC de forma que altere o dia.
+
+# 10. API
+
+A API deverá utilizar:
+
+`/api/v1`
+
+Padrões:
+- REST JSON.
+- Swagger/OpenAPI.
+- Problem Details RFC 9457.
+- HTTP status codes apropriados.
+- Validação de requests.
+- DTOs separados das entidades.
+- Correlation ID.
+- Mensagens de erro em pt-BR.
+- Sem exposição de stack traces ou detalhes internos.
+
+Mudanças incompatíveis deverão exigir nova versão da API.
+
+# 11. Frontend e identidade visual
+
+Direção visual:
+
+- Moderno.
+- Tecnológico.
+- Minimalista.
+- Acolhedor, sem aparência infantil.
+- Roxo e lilás como cores principais.
+- Cores neutras complementares.
+- Mobile-first.
+
+Crie design tokens centralizados.
+
+Prepare componentes compartilhados para:
+- Botões.
+- Inputs.
+- Selects.
+- Formulários.
+- Cards.
+- Modais.
+- Tabelas.
+- Feedbacks.
+- Loading.
+- Skeletons.
+- Estados vazios.
+- Estados de erro.
+
+Padrão de acessibilidade: WCAG 2.2 AA.
+
+A arquitetura deve estar preparada para modo escuro, mas o tema inicial será claro.
+
+# 12. Documentação obrigatória
+
+Crie ou atualize:
+
+- README.md.
+- ARCHITECTURE.md.
+- CONTRIBUTING.md.
+- .editorconfig.
+- ADRs.
+- Documentação para execução local.
+- Documentação de configuração de ambiente.
+- Documentação de migrations.
+- Documentação de testes.
+- Documentação de CI/CD.
+
+Os ADRs devem registrar decisões arquiteturais importantes, alternativas consideradas e justificativas.
+
+# 13. Primeira implementação
+
+Nesta etapa, execute somente a fundação técnica.
+
+Entregáveis:
+
+1. Estrutura organizada do repositório.
+2. Solution .NET 10.
+3. Projetos backend definidos.
+4. Frontend React + TypeScript + Vite.
+5. Configuração inicial do Tailwind CSS e shadcn/ui.
+6. Docker Compose com SQL Server para Development.
+7. Integração inicial do EF Core.
+8. Configuração de dependency injection.
+9. Health checks básicos.
+10. Middleware de tratamento de exceções com Problem Details.
+11. Configuração inicial de Swagger.
+12. Configuração de testes unitários e de integração.
+13. Pipeline inicial do GitHub Actions.
+14. README com instruções completas para executar localmente.
+15. ADRs das decisões arquiteturais iniciais.
+
+Crie apenas uma funcionalidade técnica mínima para validar a comunicação entre frontend, API e banco.
+
+Não crie ainda funcionalidades menstruais ou dados sensíveis fictícios que possam ser confundidos com dados reais.
+
+# 14. Qualidade e validação
+
+Ao terminar:
+
+- Execute dotnet restore.
+- Execute dotnet build.
+- Execute dotnet test.
+- Execute npm install.
+- Execute o build do frontend.
+- Execute os testes disponíveis.
+- Valide a inicialização do SQL Server pelo Docker Compose.
+- Corrija erros encontrados.
+
+Não declare que algo funciona sem executar e verificar.
+
+Não deixe erros de compilação conhecidos.
+
+Não esconda falhas de testes.
+
+# 15. Forma de trabalho
+
+Trabalhe de maneira incremental.
+
+Antes de alterar arquivos:
+1. Inspecione o repositório.
+2. Apresente um resumo da estrutura encontrada.
+3. Apresente o plano de implementação.
+4. Identifique riscos e decisões pendentes.
+
+Depois, implemente a fundação.
+
+Não implemente funcionalidades fora do escopo desta etapa.
+
+Não adicione tecnologias não aprovadas sem justificativa.
+
+Não invente regras de negócio.
+
+Se encontrar contradições entre requisitos, documente-as e solicite decisão antes de tomar uma decisão irreversível.
+
+# 16. Relatório final
+
+Ao concluir, apresente:
+
+- Estrutura criada.
+- Tecnologias e versões utilizadas.
+- Decisões arquiteturais.
+- Arquivos principais.
+- Comandos para executar localmente.
+- Testes executados e resultados.
+- Pendências.
+- Riscos identificados.
+- Próxima etapa recomendada.
+
+**Critério de sucesso:** um repositório organizado, compilando corretamente, com frontend, API e SQL Server preparados para iniciar o desenvolvimento dos módulos do CicloHelper.

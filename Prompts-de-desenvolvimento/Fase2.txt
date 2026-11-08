@@ -1,0 +1,483 @@
+# CicloHelper — Fase 2: Autenticação, Identidade e Gerenciamento de Sessões
+
+Atue como um Senior Software Engineer e Security Architect especializado em ASP.NET Core, .NET 10, OpenID Connect, OAuth 2.0, segurança de aplicações web e proteção de dados sensíveis.
+
+Sua missão é implementar o módulo de autenticação e identidade do CicloHelper, respeitando integralmente a arquitetura e as decisões aprovadas neste projeto.
+
+Esta etapa deve entregar uma implementação funcional, segura, testável e preparada para produção.
+
+Não implemente funcionalidades de outros módulos além das necessárias para integração com autenticação.
+
+# 1. Antes de começar
+
+Inspecione o repositório e a documentação produzida na Fase 1.
+
+Verifique:
+- Estrutura da Solution.
+- Projetos existentes.
+- Convenções de código.
+- Configuração do Entity Framework Core.
+- Configuração do SQL Server.
+- Configuração do frontend.
+- Testes existentes.
+- ADRs existentes.
+- Pipeline CI/CD.
+
+Não recrie projetos ou estruturas já existentes.
+
+Não sobrescreva implementações funcionais sem justificativa.
+
+Apresente um plano de implementação antes de modificar arquivos.
+
+Se encontrar decisões incompatíveis ou pendências que afetem a segurança, documente-as e solicite esclarecimento antes de implementar.
+
+# 2. Arquitetura de autenticação aprovada
+
+O CicloHelper utilizará arquitetura BFF (Backend for Frontend).
+
+O ASP.NET Core será responsável por:
+- Gerenciar autenticação.
+- Gerenciar sessões.
+- Executar fluxos OIDC.
+- Armazenar tokens dos provedores.
+- Validar identidade.
+- Gerenciar logout.
+- Autorizar operações.
+- Gerenciar vinculação de provedores.
+
+O React nunca terá acesso direto aos tokens de autenticação dos provedores.
+
+Não disponibilizar access tokens ou refresh tokens ao JavaScript.
+
+Não armazenar tokens em:
+- localStorage.
+- sessionStorage.
+- IndexedDB.
+- Cookies acessíveis ao JavaScript.
+
+A sessão da aplicação deverá ser gerenciada pelo backend.
+
+# 3. Domínios
+
+Domínio do frontend:
+
+https://ciclohelper.app
+
+Domínio da API:
+
+https://api-ciclohelper.app
+
+O frontend utilizará um proxy/BFF na própria origem para encaminhar chamadas autenticadas ao backend.
+
+A comunicação deverá preservar a mesma origem percebida pelo navegador.
+
+Não criar um segundo BFF independente.
+
+Documentar o funcionamento do proxy e os requisitos de produção.
+
+# 4. Provedores de identidade
+
+Implementar autenticação por:
+
+- Google OpenID Connect.
+- Apple OpenID Connect.
+
+Requisitos:
+
+- Utilizar bibliotecas oficiais e maduras do ecossistema .NET.
+- Validar assinatura, issuer, audience, expiration e nonce dos tokens OIDC.
+- Validar state para proteção contra CSRF no fluxo de autenticação.
+- Utilizar PKCE quando aplicável ao fluxo adotado.
+- Utilizar Authorization Code Flow.
+- Não implementar autenticação própria por senha.
+- Não armazenar senhas dos usuários.
+- Não confiar apenas no e-mail retornado pelo provedor.
+- Tratar corretamente o comportamento específico do Sign in with Apple, inclusive e-mail privado e informações fornecidas somente no primeiro login.
+
+Não simular autenticação quando as credenciais reais dos provedores não estiverem configuradas.
+
+Em Development, disponibilizar mecanismos de teste seguros, claramente separados da autenticação real e impossíveis de habilitar acidentalmente em Production.
+
+# 5. Identidade interna
+
+A identidade interna do CicloHelper deverá ser independente dos provedores externos.
+
+Criar modelo adequado para:
+
+- User.
+- ExternalIdentity.
+- ExternalProvider.
+- UserSession.
+- UserRole.
+- AccountRecoveryRequest.
+
+Um usuário poderá vincular mais de um provedor de identidade.
+
+Regras obrigatórias:
+
+- O identificador interno do usuário será independente do Google ou Apple.
+- Utilizar identificadores estáveis fornecidos pelos provedores.
+- Não utilizar e-mail como identificador primário.
+- Não vincular contas automaticamente apenas porque possuem o mesmo e-mail.
+- A vinculação de uma nova identidade exigirá autenticação recente.
+- A identidade existente deverá ser comprovada antes da vinculação.
+- Impedir que uma identidade externa seja associada a mais de um usuário.
+- Auditar operações de vinculação e desvinculação.
+- Não permitir remover o último método de autenticação válido sem alternativa de recuperação.
+
+Tratar e-mails como informações pessoais, não como prova suficiente de titularidade.
+
+# 6. Gerenciamento de sessões
+
+Implementar as seguintes regras:
+
+- Inatividade máxima: 30 minutos.
+- Duração absoluta: 7 dias.
+- Renovação automática enquanto a sessão estiver válida.
+- Logout com revogação imediata da sessão.
+- Permitir sessões simultâneas em diferentes dispositivos.
+- Permitir consultar e encerrar sessões individualmente.
+- Permitir encerrar todas as outras sessões.
+- Rotacionar o identificador da sessão após autenticação.
+- Invalidar sessões antigas após recuperação de conta.
+- Exigir reautenticação para operações sensíveis.
+
+A sessão deverá possuir identificador seguro e não previsível.
+
+O backend deverá controlar:
+- Criação.
+- Renovação.
+- Expiração.
+- Revogação.
+- Última atividade.
+- Dispositivo ou navegador, com coleta mínima necessária.
+- Data de criação.
+- Estado da sessão.
+
+Não utilizar informações de fingerprinting invasivo.
+
+Não considerar a simples exclusão de cookies suficiente para revogar sessões no servidor.
+
+Implementar armazenamento de sessão compatível com múltiplas instâncias do backend, evitando dependência exclusiva de memória local.
+
+# 7. Cookies e proteção do navegador
+
+Os cookies de sessão devem utilizar:
+
+- HttpOnly.
+- Secure.
+- SameSite configurado de acordo com o fluxo de autenticação.
+- Domain e Path restritos quando possível.
+- Expiração compatível com a política de sessões.
+
+O frontend não poderá ler o cookie.
+
+Não expor identificadores de sessão em URLs.
+
+Não utilizar tokens de sessão em query strings.
+
+# 8. Proteção CSRF
+
+Implementar proteção CSRF utilizando o mecanismo antiforgery nativo do ASP.NET Core.
+
+Requisitos:
+
+- Gerar token antiforgery.
+- Disponibilizar o token ao frontend por mecanismo que não exponha a sessão.
+- Enviar token em header próprio nas operações mutáveis.
+- Validar token no backend.
+- Validar Origin e Referer conforme política definida.
+- Proteger POST, PUT, PATCH e DELETE.
+- Rejeitar requisições inválidas.
+- Testar tentativas de CSRF.
+
+Não considerar SameSite isoladamente como proteção suficiente.
+
+# 9. Autorização e papéis
+
+Preparar autorização centralizada baseada em políticas.
+
+Papéis iniciais:
+
+- User.
+- Support.
+- ContentManager.
+- SuperAdmin.
+
+Regras:
+
+- Usuários comuns acessam somente seus próprios dados.
+- Support não pode acessar dados menstruais ou reprodutivos.
+- ContentManager administra conteúdo educativo, sem acesso a dados pessoais sensíveis.
+- SuperAdmin administra configurações e administradores, sem acesso irrestrito aos dados sensíveis.
+- A autorização deverá ser validada no backend.
+- Não confiar em papéis enviados pelo frontend.
+- Não implementar permissões somente por ocultação de componentes React.
+
+Preparar autorização por recurso e propriedade, não apenas por papel.
+
+# 10. MFA administrativo
+
+MFA próprio será obrigatório para administradores.
+
+Métodos:
+
+1. Passkeys/WebAuthn como opção preferencial.
+2. TOTP como alternativa.
+3. Códigos de recuperação armazenados de forma segura.
+
+Requisitos:
+
+- Cadastro e ativação.
+- Verificação.
+- Recuperação.
+- Desativação controlada.
+- Reautenticação em operações críticas.
+- Auditoria de ativação, recuperação e desativação.
+
+Usuários comuns utilizarão a autenticação multifator oferecida pelo Google ou Apple, quando habilitada pelo provedor.
+
+Não implementar MFA próprio obrigatório para usuários comuns no MVP.
+
+# 11. Recuperação de conta
+
+Implementar fluxo de recuperação para usuários que perderem acesso aos dois provedores.
+
+O fluxo deverá ser baseado em revisão humana.
+
+Etapas:
+
+1. Usuário abre solicitação.
+2. Sistema cria protocolo.
+3. Suporte autorizado verifica titularidade conforme procedimento documentado.
+4. A verificação não poderá utilizar dados menstruais, sintomas, diário ou informações reprodutivas.
+5. A decisão deverá ser revisada e auditada.
+6. Após aprovação, invalidar sessões antigas.
+7. Permitir vinculação de novo provedor.
+8. Aplicar período de segurança de 24 horas antes de alterações críticas, salvo exceção justificada e auditada.
+
+O suporte não terá acesso às chaves criptográficas nem à descriptografia dos dados pessoais.
+
+Não implementar recuperação automática baseada exclusivamente em e-mail.
+
+# 12. Segurança adicional
+
+Implementar:
+
+- Rate limiting.
+- Proteção contra força bruta.
+- Mensagens genéricas para falhas de autenticação.
+- Proteção contra enumeração de contas.
+- Validação de redirects para impedir open redirect.
+- Proteção contra replay de fluxos de autenticação.
+- Logs estruturados sem tokens ou informações sensíveis.
+- Correlation ID.
+- Auditoria de eventos críticos.
+
+Manter os limites aprovados:
+
+- Autenticação: 10 tentativas por IP a cada 15 minutos.
+- Recuperação: 3 solicitações por conta por hora.
+- API geral: 100 requisições por minuto por usuário.
+- Endpoints sensíveis: 10 requisições por minuto por usuário.
+
+Aplicar limites adicionais por IP quando necessário.
+
+Retornar HTTP 429 com Retry-After.
+
+# 13. Auditoria
+
+Registrar eventos como:
+
+- Login bem-sucedido.
+- Falha de autenticação.
+- Logout.
+- Sessão revogada.
+- Sessão expirada.
+- Vinculação de provedor.
+- Desvinculação de provedor.
+- Alteração de papéis.
+- Ativação ou desativação de MFA.
+- Recuperação de conta.
+- Operações administrativas críticas.
+
+Cada registro deverá conter:
+- Ator.
+- Ação.
+- Timestamp UTC.
+- Resultado.
+- Correlation ID.
+- Informações técnicas estritamente necessárias.
+
+Nunca registrar:
+- Senhas.
+- Tokens.
+- Cookies.
+- Códigos MFA.
+- Códigos de recuperação em texto puro.
+- Dados menstruais.
+- Sintomas.
+- Diário.
+- Informações reprodutivas.
+
+Implementar trilha de auditoria com acesso restrito e proteção contra alteração indevida.
+
+# 14. Frontend React
+
+Criar a experiência de autenticação:
+
+- Tela de entrada.
+- Botão Entrar com Google.
+- Botão Entrar com Apple.
+- Estado de carregamento.
+- Tratamento de falha.
+- Logout.
+- Tela de sessão expirada.
+- Gerenciamento de dispositivos e sessões.
+- Gerenciamento de provedores vinculados.
+- Fluxo de recuperação de conta.
+- Fluxos administrativos de MFA.
+
+O frontend deverá utilizar o BFF e nunca manipular tokens dos provedores.
+
+Não implementar ainda o onboarding completo ou dashboard.
+
+Criar componentes acessíveis conforme WCAG 2.2 AA.
+
+Utilizar a identidade visual aprovada: roxo, lilás e neutros.
+
+# 15. Persistência
+
+Implementar migrations EF Core para as entidades necessárias.
+
+Garantir:
+
+- Índices adequados.
+- Constraints de unicidade.
+- Relacionamentos consistentes.
+- Integridade referencial.
+- Controle de concorrência quando necessário.
+- Campos de auditoria.
+- Datas armazenadas corretamente.
+
+Não armazenar tokens de provedores em texto puro.
+
+Caso tokens precisem ser persistidos para chamadas futuras, utilizar armazenamento protegido no backend, com integração planejada à arquitetura criptográfica aprovada.
+
+Não inventar mecanismos criptográficos próprios.
+
+# 16. Testes obrigatórios
+
+Backend:
+- Login OIDC.
+- Validação de tokens.
+- State e nonce.
+- PKCE.
+- Sessão expirada.
+- Sessão revogada.
+- Rotação de identificador.
+- Logout.
+- Sessões simultâneas.
+- Vinculação de identidades.
+- Tentativa de vinculação por e-mail igual.
+- Prevenção de enumeração.
+- CSRF.
+- Autorização por papel.
+- Autorização por propriedade.
+- Recuperação de conta.
+- Rate limiting.
+- Auditoria.
+
+Frontend:
+- Fluxos de login.
+- Erros.
+- Loading.
+- Logout.
+- Sessão expirada.
+- Gerenciamento de sessões.
+- Acessibilidade.
+
+Integração:
+- Persistência no SQL Server.
+- Migrations.
+- Revogação real de sessão.
+- Integração BFF/API.
+
+Criar testes que comprovem que um usuário não consegue acessar ou administrar a identidade de outro usuário.
+
+Não utilizar mocks para substituir todos os testes de integração. Os fluxos críticos precisam de testes reais contra SQL Server e infraestrutura de teste apropriada.
+
+# 17. Documentação e ADRs
+
+Criar ou atualizar:
+
+- ADR de arquitetura BFF.
+- ADR de integração Google OIDC.
+- ADR de integração Apple OIDC.
+- ADR de gerenciamento de sessões.
+- ADR de proteção CSRF.
+- ADR de recuperação de conta.
+- ADR de autorização.
+- Documentação de configuração de provedores.
+- Documentação de variáveis de ambiente.
+- Documentação de execução local.
+
+Documentar também as limitações e dependências de configuração dos provedores.
+
+# 18. Configuração de ambiente
+
+Utilizar configurações distintas para Development e Production.
+
+Não colocar secrets no repositório.
+
+Utilizar User Secrets ou mecanismo equivalente para desenvolvimento local.
+
+Em produção, preparar integração com Azure Key Vault e Managed Identity.
+
+Criar arquivos de exemplo sem valores secretos.
+
+Não permitir que credenciais de Development sejam usadas em Production.
+
+# 19. Critérios de conclusão
+
+Antes de concluir:
+
+- dotnet restore.
+- dotnet build.
+- dotnet test.
+- npm install.
+- Build do frontend.
+- Testes do frontend.
+- Migrations aplicáveis.
+- Testes de integração com SQL Server.
+- Verificação de vulnerabilidades das dependências.
+
+Não declarar testes executados sem executá-los.
+
+Não deixar vulnerabilidades críticas conhecidas sem tratamento.
+
+Não utilizar autenticação simulada em Production.
+
+# 20. Relatório final
+
+Apresentar:
+
+1. Arquitetura implementada.
+2. Entidades criadas.
+3. Endpoints implementados.
+4. Fluxos de autenticação.
+5. Estratégia de sessões.
+6. Proteções de segurança.
+7. Migrations.
+8. Testes executados e resultados.
+9. Configurações necessárias no Google e Apple.
+10. Variáveis de ambiente necessárias.
+11. Pendências.
+12. Riscos identificados.
+13. Próxima etapa recomendada.
+
+Critério de sucesso:
+
+O CicloHelper deverá possuir autenticação funcional com Google e Apple, identidade interna independente, BFF seguro, gerenciamento de sessões, autorização centralizada e testes automatizados.
+
+Não avançar para os módulos menstruais até que os fluxos críticos de identidade e segurança estejam implementados e validados.
